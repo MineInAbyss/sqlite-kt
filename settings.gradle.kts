@@ -1,4 +1,6 @@
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+
+pluginManagement {
+    includeBuild("codegen-plugin")
 }
 rootProject.name = "sqlite-kt"
+include( ":test-codegen")
