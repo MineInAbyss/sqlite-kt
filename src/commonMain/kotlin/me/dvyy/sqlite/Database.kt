@@ -31,6 +31,7 @@ open class Database(
     val watchQueryThrottle: Duration = 100.milliseconds,
     val parentScope: CoroutineScope? = null,
     val onClose: () -> Unit = {},
+    val useWAL: Boolean = true,
     init: WriteTransaction.() -> Unit = {},
 ) : AutoCloseable {
     @PublishedApi
@@ -87,11 +88,11 @@ open class Database(
             path, readFlag or SQLITE_OPEN_NOMUTEX
         ).also {
             it.execSQL(
-                """
-                PRAGMA journal_mode=WAL;
-                PRAGMA synchronous=normal;
-                PRAGMA journal_size_limit=6144000;
-                """.trimIndent()
+                buildString {
+                    if (useWAL) appendLine("PRAGMA journal_mode=WAL;")
+                    appendLine("PRAGMA synchronous=normal;")
+                    appendLine("PRAGMA journal_size_limit=6144000;")
+                }
             )
             if (readOnly) createdReadConnections.trySend(it)
         }.let { PrepareCachingSQLiteConnection(it) }

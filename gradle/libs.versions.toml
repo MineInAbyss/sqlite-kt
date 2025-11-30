@@ -1,11 +1,12 @@
 [versions]
-kotlin = "2.2.0"
-kotlinpoet = "2.1.0"
+kotlin = "2.2.20"
+kotlinpoet = "2.2.0"
 
 [libraries]
-androidx-sqlite = "androidx.sqlite:sqlite-bundled:2.6.1"
+androidx-sqlite = "androidx.sqlite:sqlite-bundled:2.6.2"
 kotlinx-serialization-json = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1"
 kotlinx-coroutines-core = "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2"
+kotlinx-coroutines-core-jvm = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.10.2"
 kotlinx-coroutines-test = "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2"
 kotest-assertions = "io.kotest:kotest-assertions-core:6.0.0.M6"
 kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }

@@ -57,7 +57,13 @@ open class Transaction(
     fun select(
         @Language("SQLite") sql: String,
         vararg parameters: Any,
-    ): SelectStatement = SelectStatement(sql, parameters)
+    ): SelectStatement<Unit> = SelectStatement(sql, parameters, Unit)
+
+    fun <T> select(
+        @Language("SQLite") sql: String,
+        context: T,
+        vararg parameters: Any,
+    ): SelectStatement<T> = SelectStatement(sql, parameters, context)
 
     inline fun <T> forEach(@Language("SQLite") sql: String, statement: NamedColumnSqliteStatement.() -> T) {
         prepare(sql) {
