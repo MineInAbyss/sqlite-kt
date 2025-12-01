@@ -12,7 +12,6 @@ import me.dvyy.sqlite.connection.PrepareCachingSQLiteConnection
 import me.dvyy.sqlite.internal.throttle
 import me.dvyy.sqlite.internal.transaction
 import me.dvyy.sqlite.observers.DatabaseObservers
-import me.dvyy.sqlite.tables.TableReading
 import kotlin.io.path.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -34,11 +33,60 @@ open class Database(
     val useWAL: Boolean = true,
     init: WriteTransaction.() -> Unit = {},
 ) : AutoCloseable {
+    private val trackedTables = mutableListOf<String>()
+
+    @PublishedApi
+    internal val tableIndices = mutableMapOf<String, Int>()
+
     @PublishedApi
     internal val writeConnection = createConnection(readOnly = false).apply {
         val tx = WriteTransaction(this, defaultIdentity ?: -1)
         transaction {
+            tx.exec(
+                """
+                CREATE TEMP TABLE skt_table_modification_log (
+                    table_id INTEGER PRIMARY KEY,
+                    invalidated INTEGER DEFAULT 1
+                );
+            """.trimIndent()
+            )
             init(tx)
+        }
+    }
+
+    suspend fun trackChangesOn(table: String) {
+        write {
+            if (table in trackedTables) return@write
+            trackedTables.add(table)
+            val id = trackedTables.lastIndex
+            tableIndices[table] = id
+            exec(
+                """
+                CREATE TEMP TRIGGER IF NOT EXISTS [skt_reactive_insert_$table]
+                AFTER INSERT ON $table
+                BEGIN
+                    INSERT OR IGNORE INTO skt_table_modification_log VALUES ($id, 1);
+                END;
+            """.trimIndent()
+            )
+            exec(
+                """
+                CREATE TEMP TRIGGER IF NOT EXISTS [skt_reactive_update_$table]
+                AFTER UPDATE ON $table
+                BEGIN
+                    INSERT OR IGNORE INTO skt_table_modification_log VALUES ($id, 1);
+                END;
+            """.trimIndent()
+            )
+            exec(
+                """
+                CREATE TEMP TRIGGER IF NOT EXISTS [skt_reactive_delete_$table]
+                AFTER DELETE ON $table
+                BEGIN
+                    INSERT OR IGNORE INTO skt_table_modification_log VALUES ($id, 1);
+                END;
+            """.trimIndent()
+            )
         }
     }
 
@@ -113,9 +161,16 @@ open class Database(
         crossinline block: WriteTransaction.() -> T,
     ): T = withContext(dbWriteDispatcher) {
         val tx = WriteTransaction(writeConnection, identity)
-        writeConnection.transaction {
-            tx.block()
-        }.also { observers.notify(tx.modifiedTables) }
+        val (result, modified) = writeConnection.transaction {
+            tx.block() to with(tx) {
+                val invalidated =
+                    select("select table_id from skt_table_modification_log where invalidated = 1;").map { getInt(0) }
+                if (invalidated.isNotEmpty()) exec("DELETE FROM skt_table_modification_log;")
+                invalidated
+            }
+        }
+        if (modified.isNotEmpty()) observers.notify(modified)
+        result
     }
 
     /** Run a database read on read thread pool. */
@@ -130,11 +185,13 @@ open class Database(
 
     /** Watches tables associated with a query for changes (this API is not complete yet.) */
     inline fun <T> watch(
-        vararg tables: TableReading,
+        vararg tables: String,
         crossinline read: Transaction.() -> T,
     ) = flow {
+        val tableIds = tables.map { tableIndices[it] ?: error("Table $it is not being tracked") }.toSet()
+        val tableFlow = observers.forTables(tableIds)
         emit(read { read() })
-        observers.forTables(TableReading.reduce(tables.toSet())).throttle(watchQueryThrottle).collect {
+        tableFlow.throttle(watchQueryThrottle).collect {
             emit(read { read() })
         }
     }

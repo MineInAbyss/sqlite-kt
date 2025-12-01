@@ -48,4 +48,8 @@ class SelectStatement<R>(
         if (step()) statement()
         else null
     }
+
+    inline fun <T> asFlow() {
+
+    }
 }
