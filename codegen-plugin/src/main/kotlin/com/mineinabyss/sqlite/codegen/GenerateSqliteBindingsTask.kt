@@ -36,6 +36,9 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
     @Input
     lateinit var packageName: String
 
+    @Input
+    lateinit var mainClassName: String
+
     @OutputDirectory
     lateinit var outputDir: Path
 
@@ -201,8 +204,8 @@ ${query.prependIndent("║ ")}
         }
         // Create main DB Schema file
 
-        FileSpec(packageName, "Schema") {
-            addClass("Schema") {
+        FileSpec(packageName, mainClassName) {
+            addClass(mainClassName) {
                 val queryFileClasses = queryFiles.map { ClassName(this@FileSpec.packageName, it.nameWithoutExtension) }
                 addFunction("create") {
                     contextParameter("tx", WriteTransaction::class)

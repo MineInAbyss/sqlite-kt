@@ -10,8 +10,9 @@ class SqliteCodegenPlugin : Plugin<Project> {
         extension.apply {
             outputDir.convention(project.layout.buildDirectory.dir("generated/source/sqlite"))
             packageName.convention("me.dvyy.sqlite.generated")
+            mainClassName.convention("Schema")
             sourceDir.convention(project.layout.projectDirectory.dir("src/main/sql"))
-            databaseLocation.convention(project.layout.buildDirectory.file("schema.db"))
+            generatedDatabasePath.convention(project.layout.buildDirectory.file("schema.db"))
         }
 
         // Register a task to generate code
@@ -21,8 +22,9 @@ class SqliteCodegenPlugin : Plugin<Project> {
 
             it.source = extension.sourceDir.get().asFile.toPath()
             it.packageName = extension.packageName.get()
+            it.mainClassName = extension.mainClassName.get()
             it.outputDir = extension.outputDir.get().asFile.toPath()
-            it.databaseLocation = extension.databaseLocation.get().asFile.toPath()
+            it.databaseLocation = extension.generatedDatabasePath.get().asFile.toPath()
         }
 
         project.afterEvaluate {
