@@ -34,25 +34,18 @@ class SqliteCodegenPlugin : Plugin<Project> {
             }
 
             // Add generated sources to the main source set
-            project.afterEvaluate {
-                project.plugins.withId("org.jetbrains.kotlin.jvm") {
-                    val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-                    sourceSets.getByName("main") { sourceSet ->
-                        sourceSet.java.srcDir(db.outputDir)
-                    }
+            project.plugins.withId("org.jetbrains.kotlin.jvm") {
+                val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+                sourceSets.getByName("main") { sourceSet ->
+                    sourceSet.java.srcDir(task.map { it.outputDir })
                 }
             }
         }
 
-        val generateSqliteBindings = project.tasks.register("generateSqliteBindings") {
+        project.tasks.register("generateSqliteBindings") {
             it.group = "codegen"
             it.description = "Generate Kotlin code from SQL files"
             it.dependsOn(project.tasks.withType(GenerateSqliteBindingsTask::class.java))
-        }
-
-        project.afterEvaluate {
-            // Make compileKotlin depend on generation task
-            project.tasks.findByName("compileKotlin")?.dependsOn(generateSqliteBindings)
         }
     }
 }

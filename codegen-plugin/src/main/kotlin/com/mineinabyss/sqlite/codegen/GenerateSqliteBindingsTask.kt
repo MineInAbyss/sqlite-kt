@@ -1,6 +1,5 @@
 package com.mineinabyss.sqlite.codegen
 
-import androidx.sqlite.SQLiteException
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.ExperimentalKotlinPoetApi
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
@@ -13,21 +12,12 @@ import me.dvyy.sqlite.Database
 import me.dvyy.sqlite.Transaction
 import me.dvyy.sqlite.WriteTransaction
 import me.dvyy.sqlite.statement.SelectStatement
-import net.sf.jsqlparser.JSQLParserException
-import net.sf.jsqlparser.expression.ExpressionVisitorAdapter
-import net.sf.jsqlparser.expression.JdbcNamedParameter
-import net.sf.jsqlparser.expression.JdbcParameter
-import net.sf.jsqlparser.parser.CCJSqlParserUtil
-import net.sf.jsqlparser.statement.StatementVisitorAdapter
-import net.sf.jsqlparser.statement.delete.Delete
-import net.sf.jsqlparser.statement.insert.Insert
-import net.sf.jsqlparser.statement.select.Select
-import net.sf.jsqlparser.util.TablesNamesFinder
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.*
 import java.nio.file.Path
 import kotlin.io.path.*
+
 
 open class GenerateSqliteBindingsTask : DefaultTask() {
     @InputDirectory
@@ -58,26 +48,19 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
             .split("^--.*".toRegex(RegexOption.MULTILINE))
             .map { it.trim().trim { it == '\n' } }
             .filter { it.isNotBlank() }
+
         val queryFiles = (source / "queries").walk().filter { it.toString().endsWith(".sql") }
 
         databaseLocation.deleteIfExists()
         Database(databaseLocation.absolutePathString(), useWAL = false) {
             // Verify schema doesn't error
             schema.forEach { query ->
-                try {
+                printingErrorMessages(query, "Error creating database schema") {
                     exec(query)
-                } catch (e: SQLiteException) {
-                    throw GradleException(
-                        """Error creating database schema
-╔══ Error
-${e.message?.prependIndent("║ ")}
-╠══ Query
-${query.prependIndent("║ ")}
-╚══
-                                """
-                    )
                 }
             }
+
+            val seenColumnNames = mutableListOf<List<String>>()
 
             // Create query files
             queryFiles.forEach { queriesFile ->
@@ -90,7 +73,10 @@ ${query.prependIndent("║ ")}
                             val name = namedQuery.lines().first().removePrefix("--").trim()
                             val query = namedQuery.lines().drop(1).joinToString("\n").trim { it == '\n' }
                             if (query.isBlank()) return@forEach
-                            try {
+                            printingErrorMessages(
+                                query,
+                                "Could not compile query $name in ${queriesFile.relativeTo(source)}"
+                            ) {
                                 val colNames = prepare(query) {
                                     val seen = mutableMapOf<String, Int>()
                                     getColumnNames().map { name ->
@@ -104,65 +90,46 @@ ${query.prependIndent("║ ")}
                                         }
                                     }
                                 }
-                                val paramNames = mutableListOf<String>()
-                                val expressionVisitor: ExpressionVisitorAdapter<*> =
-                                    object : ExpressionVisitorAdapter<Any?>() {
-                                        override fun <S> visit(jdbcParameter: JdbcParameter, context: S?): Any {
-                                            project.logger.lifecycle("Visited $jdbcParameter")
-                                            if (jdbcParameter.toString() !in paramNames)
-                                                paramNames += jdbcParameter.toString()
-                                            return 1
-                                        }
 
-                                        override fun <S> visit(jdbcParameter: JdbcNamedParameter, context: S?): Any {
-                                            project.logger.lifecycle("Visited $jdbcParameter")
-                                            if (jdbcParameter.name !in paramNames)
-                                                paramNames += jdbcParameter.name
-                                            return 1
-                                        }
-
-                                    }
-                                val statementVisitor = object : StatementVisitorAdapter<Any?>() {
-                                    override fun <S> visit(select: Select, context: S) {
-                                        select.withItemsList?.forEach { it.accept(this, context) }
-                                        select.plainSelect?.where?.accept(expressionVisitor, context)
-                                    }
-
-                                    override fun <S : Any?> visit(insert: Insert, context: S?) {
-                                        insert.withItemsList?.forEach { it.accept(this, context) }
-                                        insert.values?.expressions?.accept(expressionVisitor, context)
-                                    }
-
-                                    override fun <S : Any?> visit(delete: Delete, context: S?) {
-                                        delete.withItemsList?.forEach { it.accept(this, context) }
-                                        delete.where?.accept(expressionVisitor, context)
-                                    }
+                                // parse parameters using :name style from query using regex
+                                val paramNames =
+                                    ":([a-zA-Z][a-zA-Z0-9]*)".toRegex().findAll(query).map { it.groupValues[1] }
+                                        .distinct()
+                                        .toList()
+                                val parsedQuery = when {
+                                    query.trim().lowercase().startsWith("insert") -> "insert"
+                                    query.trim().lowercase().startsWith("select") -> "select"
+                                    else -> "other"
                                 }
-                                val parsedQuery = CCJSqlParserUtil.parse(query)
-                                TablesNamesFinder.findTables(query)
-                                parsedQuery.accept(statementVisitor)
+
                                 addFunction(name) {
                                     paramNames.forEach { addParameter(it, Any::class) }
                                     when (parsedQuery) {
-                                        is Insert -> {
-
+                                        "insert" -> {
                                             contextParameter("tx", WriteTransaction::class)
                                             returns(Long::class)
                                             addCode("return tx.insert(%S,", query)
                                         }
 
-                                        is Select -> {
-                                            val contextClass = this@addClass.addClass("Context$name") {
-                                                colNames.forEachIndexed { id, name ->
-                                                    addProperty(name, Int::class) {
-                                                        initializer("%L", id)
+                                        "select" -> {
+                                            val existingClass = seenColumnNames.indexOf(colNames)
+                                            val name =
+                                                "Context${if (existingClass != -1) existingClass else seenColumnNames.size}"
+                                            if (existingClass == -1) {
+                                                seenColumnNames.add(colNames)
+                                                this@addClass.addClass(name) {
+                                                    colNames.forEachIndexed { id, name ->
+                                                        addProperty(name, Int::class) {
+                                                            initializer("%L", id)
+                                                        }
                                                     }
                                                 }
                                             }
-                                            val contextClassName = ClassName("", contextClass.name!!)
+                                            val contextClassName = ClassName("", name)
                                             contextParameter("tx", Transaction::class)
                                             returns(
-                                                SelectStatement::class.asClassName().parameterizedBy(contextClassName)
+                                                SelectStatement::class.asClassName()
+                                                    .parameterizedBy(contextClassName)
                                             )
                                             addCode(
                                                 "return tx.select<%T>(%S,%T(),",
@@ -183,17 +150,6 @@ ${query.prependIndent("║ ")}
                                     }
                                     addCode(")")
                                 }
-                            } catch (e: Exception) {
-                                if (e is SQLiteException || e is JSQLParserException)
-                                    throw GradleException(
-                                        """Could not compile query $name in ${queriesFile.relativeTo(source)}
-╔══ Error
-${e.message?.prependIndent("║ ")}
-╠══ Query
-${query.prependIndent("║ ")}
-╚══"""
-                                    )
-                                else throw e
                             }
                         }
                     }
@@ -201,8 +157,8 @@ ${query.prependIndent("║ ")}
                 fileSpec.writeTo(outputDir)
             }
         }
-        // Create main DB Schema file
 
+        // Create main DB Schema file
         FileSpec(packageName, mainClassName) {
             addClass(mainClassName) {
                 val queryFileClasses = queryFiles.map { ClassName(this@FileSpec.packageName, it.nameWithoutExtension) }
