@@ -48,7 +48,6 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
     @OptIn(ExperimentalPathApi::class, ExperimentalKotlinPoetApi::class)
     @TaskAction
     fun generate() {
-        val dbLocation = project.layout.buildDirectory.dir("schema.db").get().asFile.toPath()
         source.resolve("schema").walk().filter { it.toString().endsWith(".sql") }.associateWith {
             it.readText()
         }.toList()
@@ -61,8 +60,8 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
             .filter { it.isNotBlank() }
         val queryFiles = (source / "queries").walk().filter { it.toString().endsWith(".sql") }
 
-        dbLocation.deleteIfExists()
-        Database(dbLocation.absolutePathString(), useWAL = false) {
+        databaseLocation.deleteIfExists()
+        Database(databaseLocation.absolutePathString(), useWAL = false) {
             // Verify schema doesn't error
             schema.forEach { query ->
                 try {

@@ -5,10 +5,10 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.OutputFile
 
 interface SqliteCodegenExtension {
+    val name: String
+
     /** Directory containing SQL files to generate bindings from. */
     @get:InputDirectory
     val sourceDir: DirectoryProperty
@@ -22,10 +22,10 @@ interface SqliteCodegenExtension {
     val mainClassName: Property<String>
 
     /** Output directory for generated code, will be added as generated source root. */
-    @get:OutputDirectory
+//    @get:OutputDirectory
     val outputDir: DirectoryProperty
 
     /** Path to place generated sqlite database (for attaching to in IDE.) */
-    @get:OutputFile
+//    @get:OutputFile
     val generatedDatabasePath: RegularFileProperty
 }

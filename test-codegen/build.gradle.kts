@@ -23,4 +23,10 @@ compileKotlin.compilerOptions {
 }
 
 sqliteCodegen {
+    register("main") {
+        packageName = "me.dvyy.sqlite.generated"
+    }
+    register("other") {
+        packageName = "me.dvyy.sqlite.generated.other"
+    }
 }
