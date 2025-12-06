@@ -12,6 +12,7 @@ open class Transaction(
     @PublishedApi
     @JvmField
     internal val connection: SQLiteConnection,
+    @JvmField
     val identity: Identity,
 ) {
     inline fun <T> prepare(

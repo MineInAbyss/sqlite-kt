@@ -1,7 +1,6 @@
 package com.mineinabyss.sqlite.codegen
 
 import androidx.sqlite.SQLiteException
-import net.sf.jsqlparser.JSQLParserException
 import org.gradle.api.GradleException
 
 internal inline fun printingErrorMessages(
@@ -12,7 +11,7 @@ internal inline fun printingErrorMessages(
     try {
         block()
     } catch (e: Exception) {
-        if (e is SQLiteException || e is JSQLParserException)
+        if (e is SQLiteException)
             throw GradleException(
                 """$errorMessage
 ╔══ Error

@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS spawn_data
+(
+    id       INTEGER PRIMARY KEY,
+    data     TEXT NOT NULL,
+    category TEXT GENERATED ALWAYS AS (data ->> 'category') STORED
+) STRICT;
+--

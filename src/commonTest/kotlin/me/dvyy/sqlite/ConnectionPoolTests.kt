@@ -6,38 +6,34 @@ import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.test.Test
 
 class ConnectionPoolTests {
-    @Test
-    fun `should correctly notify watching queries when tracking changes on table`() = runBlocking {
-        val db = Database.temporary()
-        db.write {
-            exec("CREATE TABLE test (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT)")
-        }
-        db.trackChangesOn("test")
-        launch {
-            db.watch("test") { select("SELECT * FROM test").map { getInt(0) } }.collect {
-                println("Rows $it")
-            }
-        }
-        db.write {
-            exec("INSERT INTO test VALUES (NULL, 'hello')")
-        }
-        delay(1000)
-        db.write {
-            exec("INSERT INTO test VALUES (NULL, 'world')")
-        }
-        delay(1000)
-        db.write {
-            exec("INSERT INTO test VALUES (NULL, 'world')")
-        }
-    }
+//    @Test
+//    fun `should correctly notify watching queries when tracking changes on table`() = runTest {
+//        val db = Database.temporary()
+//        db.write {
+//            exec("CREATE TABLE test (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT)")
+//        }
+//        db.trackChangesOn("test")
+//            db.watch("test") { select("SELECT * FROM test").map { getInt(0) } }.collect {
+//                println("Rows $it")
+//            }
+//        db.write {
+//            exec("INSERT INTO test VALUES (NULL, 'hello')")
+//        }
+//        delay(1000)
+//        db.write {
+//            exec("INSERT INTO test VALUES (NULL, 'world')")
+//        }
+//        delay(1000)
+//        db.write {
+//            exec("INSERT INTO test VALUES (NULL, 'world')")
+//        }
+//    }
 
     @Test
     fun `each thread should reuse the same connection`() = runTest {

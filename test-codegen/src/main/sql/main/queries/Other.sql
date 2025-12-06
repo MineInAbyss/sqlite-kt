@@ -1,3 +1,3 @@
 -- test
 SELECT *
-FROM spawn_data
+FROM spawn_data;

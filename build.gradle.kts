@@ -21,6 +21,7 @@ kotlin {
                 dependencies {
                     api(libs.androidx.sqlite)
                     implementation(libs.kotlinx.coroutines.core)
+                    implementation(libs.log4k)
                 }
             }
         }

@@ -14,6 +14,6 @@ class WriteTransaction(
         vararg parameters: Any,
     ): Long {
         exec(sql, *parameters)
-        return select("SELECT LAST_INSERT_ROWID()").first { getLong(0) }
+        return select("SELECT last_insert_rowid()").first { getLong(0) }
     }
 }

@@ -11,13 +11,17 @@ import dev.kord.codegen.kotlinpoet.addProperty
 import me.dvyy.sqlite.Database
 import me.dvyy.sqlite.Transaction
 import me.dvyy.sqlite.WriteTransaction
+import me.dvyy.sqlite.generated.antlr.SQLiteLexer
+import me.dvyy.sqlite.generated.antlr.SQLiteParser
+import me.dvyy.sqlite.generated.antlr.SQLiteParserBaseListener
 import me.dvyy.sqlite.statement.SelectStatement
+import org.antlr.v4.runtime.tree.ParseTreeWalker
+import org.antlr.v4.runtime.tree.TerminalNode
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.*
 import java.nio.file.Path
 import kotlin.io.path.*
-
 
 open class GenerateSqliteBindingsTask : DefaultTask() {
     @InputDirectory
@@ -44,10 +48,7 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
 
         val schemaSource = source / "schema" / "Schema.sql"
         if (schemaSource.notExists()) throw GradleException("Could not find schema source file: $schemaSource")
-        val schema = source.resolve("schema").resolve("Schema.sql").readText()
-            .split("^--.*".toRegex(RegexOption.MULTILINE))
-            .map { it.trim().trim { it == '\n' } }
-            .filter { it.isNotBlank() }
+        val schema = parseStatements(source.resolve("schema").resolve("Schema.sql").readText(), includeNames = false)
 
         val queryFiles = (source / "queries").walk().filter { it.toString().endsWith(".sql") }
 
@@ -55,8 +56,8 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
         Database(databaseLocation.absolutePathString(), useWAL = false) {
             // Verify schema doesn't error
             schema.forEach { query ->
-                printingErrorMessages(query, "Error creating database schema") {
-                    exec(query)
+                printingErrorMessages(query.sql, "Error creating database schema") {
+                    exec(query.sql)
                 }
             }
 
@@ -64,20 +65,15 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
 
             // Create query files
             queryFiles.forEach { queriesFile ->
-                val queries = queriesFile.readText()
-                    .split("^--".toRegex(RegexOption.MULTILINE))
-                    .filter { !it.isBlank() }
+                val statements = parseStatements(queriesFile.readText())
                 val fileSpec = FileSpec(packageName, queriesFile.nameWithoutExtension) {
                     addClass(queriesFile.nameWithoutExtension) {
-                        queries.forEach { namedQuery ->
-                            val name = namedQuery.lines().first().removePrefix("--").trim()
-                            val query = namedQuery.lines().drop(1).joinToString("\n").trim { it == '\n' }
-                            if (query.isBlank()) return@forEach
+                        statements.forEach { statement ->
                             printingErrorMessages(
-                                query,
-                                "Could not compile query $name in ${queriesFile.relativeTo(source)}"
+                                statement.sql,
+                                "Could not compile query ${statement.name} in ${queriesFile.relativeTo(source)}"
                             ) {
-                                val colNames = prepare(query) {
+                                val colNames = prepare(statement.sql) {
                                     val seen = mutableMapOf<String, Int>()
                                     getColumnNames().map { name ->
                                         if (name in seen) {
@@ -91,27 +87,16 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                                     }
                                 }
 
-                                // parse parameters using :name style from query using regex
-                                val paramNames =
-                                    ":([a-zA-Z][a-zA-Z0-9]*)".toRegex().findAll(query).map { it.groupValues[1] }
-                                        .distinct()
-                                        .toList()
-                                val parsedQuery = when {
-                                    query.trim().lowercase().startsWith("insert") -> "insert"
-                                    query.trim().lowercase().startsWith("select") -> "select"
-                                    else -> "other"
-                                }
-
-                                addFunction(name) {
-                                    paramNames.forEach { addParameter(it, Any::class) }
-                                    when (parsedQuery) {
-                                        "insert" -> {
+                                addFunction(statement.name) {
+                                    statement.binds.forEach { addParameter(it, Any::class) }
+                                    when {
+                                        statement.parsed.insert_stmt() != null -> {
                                             contextParameter("tx", WriteTransaction::class)
                                             returns(Long::class)
-                                            addCode("return tx.insert(%S,", query)
+                                            addCode("return tx.insert(%S,", statement.sql)
                                         }
 
-                                        "select" -> {
+                                        statement.parsed.select_stmt() != null -> {
                                             val existingClass = seenColumnNames.indexOf(colNames)
                                             val name =
                                                 "Context${if (existingClass != -1) existingClass else seenColumnNames.size}"
@@ -134,7 +119,7 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                                             addCode(
                                                 "return tx.select<%T>(%S,%T(),",
                                                 contextClassName,
-                                                query,
+                                                statement.sql,
                                                 contextClassName
                                             )
                                         }
@@ -142,10 +127,10 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                                         else -> {
                                             contextParameter("tx", WriteTransaction::class)
                                             returns(Unit::class)
-                                            addCode("tx.exec(%S,", query)
+                                            addCode("tx.exec(%S,", statement.sql)
                                         }
                                     }
-                                    paramNames.forEach {
+                                    statement.binds.forEach {
                                         addCode("%N,", it)
                                     }
                                     addCode(")")
@@ -177,6 +162,40 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                 }
             }
         }.writeTo(outputDir)
-
     }
+
+    /**
+     * Parses sqlite statements from generated ANTLR4 parser.
+     */
+    fun parseStatements(text: String, includeNames: Boolean = true): List<ParsedStatement> {
+        val lexer = SQLiteLexer(org.antlr.v4.runtime.ANTLRInputStream(text))
+        val parser = SQLiteParser(org.antlr.v4.runtime.CommonTokenStream(lexer))
+        val statementList = parser.parse().sql_stmt_list()
+        return statementList.sql_stmt().map { statement ->
+            val nodes = mutableListOf<TerminalNode>()
+            ParseTreeWalker.DEFAULT.walk(object : SQLiteParserBaseListener() {
+                override fun visitTerminal(node: TerminalNode) {
+                    nodes += node
+                }
+            }, statement)
+            val binds = nodes.filter { it.text.startsWith(":") }.map { it.text.removePrefix(":") }.distinct()
+            val name =
+                if (includeNames) text.lineSequence().drop(statement.start.line - 2).first().removePrefix("--").trim()
+                else "Unnamed"
+            val sql = statement.start.inputStream.getText(
+                org.antlr.v4.runtime.misc.Interval.of(
+                    statement.start.startIndex,
+                    statement.stop.stopIndex
+                )
+            )
+            ParsedStatement(name = name, sql = sql, parsed = statement, binds = binds)
+        }
+    }
+
+    data class ParsedStatement(
+        val name: String,
+        val sql: String,
+        val parsed: SQLiteParser.Sql_stmtContext,
+        val binds: List<String>,
+    )
 }
