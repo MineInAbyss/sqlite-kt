@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     application
     id("org.jetbrains.kotlin.jvm") version "2.2.0"
-    id("com.mineinabyss.sqlitekt.codegen")
+    id("me.dvyy.sqlite.codegen")
 }
 
 repositories {
@@ -20,7 +20,7 @@ compileKotlin.compilerOptions {
     freeCompilerArgs.set(listOf("-Xcontext-parameters"))
 }
 
-sqliteCodegen {
+sqliteKt {
     register("main") {
         packageName = "me.dvyy.sqlite.generated"
     }

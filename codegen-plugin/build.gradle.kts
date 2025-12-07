@@ -1,6 +1,7 @@
 plugins {
     id(libs.plugins.kotlin.jvm.get().pluginId)
     `java-gradle-plugin`
+    `maven-publish`
     antlr
 }
 
@@ -33,9 +34,9 @@ tasks {
 
 gradlePlugin {
     plugins {
-        create("sqliteCodegen") {
-            id = "com.mineinabyss.sqlitekt.codegen"
-            implementationClass = "com.mineinabyss.sqlite.codegen.SqliteCodegenPlugin"
+        create("sqliteKt") {
+            id = "me.dvyy.sqlite.codegen"
+            implementationClass = "me.dvyy.sqlite.codegen.SqliteCodegenPlugin"
         }
     }
 }
@@ -49,5 +50,20 @@ sourceSets {
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xcontext-parameters")
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "mineinabyss"
+            url = uri("https://repo.mineinabyss.com/releases")
+            credentials(PasswordCredentials::class)
+        }
+        maven {
+            name = "mineinabyssSnapshots"
+            url = uri("https://repo.mineinabyss.com/snapshots")
+            credentials(PasswordCredentials::class)
+        }
     }
 }

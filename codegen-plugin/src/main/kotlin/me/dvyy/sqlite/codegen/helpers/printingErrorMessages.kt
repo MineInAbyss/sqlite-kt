@@ -1,4 +1,4 @@
-package com.mineinabyss.sqlite.codegen
+package me.dvyy.sqlite.codegen.helpers
 
 import androidx.sqlite.SQLiteException
 import org.gradle.api.GradleException

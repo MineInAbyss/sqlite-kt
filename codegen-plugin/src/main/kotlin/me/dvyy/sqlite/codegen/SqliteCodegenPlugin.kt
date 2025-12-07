@@ -1,4 +1,4 @@
-package com.mineinabyss.sqlite.codegen
+package me.dvyy.sqlite.codegen
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -17,7 +17,7 @@ class SqliteCodegenPlugin : Plugin<Project> {
                 generatedDatabasePath.convention(project.layout.buildDirectory.file("generated/databases/$name.db"))
             }
         }
-        val extension = project.extensions.add("sqliteCodegen", databaseContainer)
+        val extension = project.extensions.add("sqliteKt", databaseContainer)
         databaseContainer.all { db ->
             val task = project.tasks.register(
                 "generateSqliteBindingsFor${db.name.capitalized()}",

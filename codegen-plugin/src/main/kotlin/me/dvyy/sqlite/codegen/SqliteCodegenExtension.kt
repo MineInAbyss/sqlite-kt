@@ -1,4 +1,4 @@
-package com.mineinabyss.sqlite.codegen
+package me.dvyy.sqlite.codegen
 
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
