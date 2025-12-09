@@ -4,6 +4,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.internal.extensions.stdlib.capitalized
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 class SqliteCodegenPlugin : Plugin<Project> {
     override fun apply(project: Project) {
@@ -13,7 +14,9 @@ class SqliteCodegenPlugin : Plugin<Project> {
                 outputDir.convention(project.layout.buildDirectory.dir("generated/source/sqlite"))
                 packageName.convention("me.dvyy.sqlite.generated")
                 mainClassName.convention(name.capitalized() + "Database")
-                sourceDir.convention(project.layout.projectDirectory.dir("src/main/sql/$name"))
+                if (project.plugins.hasPlugin("org.jetbrains.kotlin.multiplatform"))
+                    sourceDir.convention(project.layout.projectDirectory.dir("src/commonMain/sql/$name"))
+                else sourceDir.convention(project.layout.projectDirectory.dir("src/main/sql/$name"))
                 generatedDatabasePath.convention(project.layout.buildDirectory.file("generated/databases/$name.db"))
             }
         }
@@ -38,6 +41,12 @@ class SqliteCodegenPlugin : Plugin<Project> {
                 val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
                 sourceSets.getByName("main") { sourceSet ->
                     sourceSet.java.srcDir(task.map { it.outputDir })
+                }
+            }
+            project.plugins.withId("org.jetbrains.kotlin.multiplatform") {
+                val kotlinExtension = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
+                kotlinExtension.sourceSets.getByName("commonMain") { sourceSet ->
+                    sourceSet.kotlin.srcDir(task.map { it.outputDir })
                 }
             }
         }

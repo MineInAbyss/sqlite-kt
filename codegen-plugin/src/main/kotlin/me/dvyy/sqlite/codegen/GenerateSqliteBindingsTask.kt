@@ -86,9 +86,17 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                                         }
                                     }
                                 }
-
                                 addFunction(statement.name) {
-                                    statement.binds.forEach { addParameter(it, Any::class) }
+                                    statement.binds.forEach {
+                                        val type = statement.functionParameters.getOrDefault(it, "Any")
+                                        addParameter(
+                                            it,
+                                            if (type.contains(".")) ClassName.bestGuess(type) else ClassName(
+                                                "kotlin",
+                                                type
+                                            )
+                                        )
+                                    }
                                     when {
                                         statement.parsed.insert_stmt() != null -> {
                                             contextParameter("tx", WriteTransaction::class)
@@ -150,7 +158,7 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                 addFunction("create") {
                     contextParameter("tx", WriteTransaction::class)
                     schema.forEach {
-                        addCode("tx.exec(%S)\n", it)
+                        addCode("tx.exec(%S)\n", it.sql)
                     }
                 }
 

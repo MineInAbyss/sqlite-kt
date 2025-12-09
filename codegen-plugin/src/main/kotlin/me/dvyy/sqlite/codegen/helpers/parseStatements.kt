@@ -1,9 +1,7 @@
 package me.dvyy.sqlite.codegen.helpers
 
 import me.dvyy.sqlite.codegen.ParsedStatement
-import me.dvyy.sqlite.generated.antlr.SQLiteLexer
-import me.dvyy.sqlite.generated.antlr.SQLiteParser
-import me.dvyy.sqlite.generated.antlr.SQLiteParserBaseListener
+import me.dvyy.sqlite.generated.antlr.*
 import org.antlr.v4.runtime.ANTLRInputStream
 import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.misc.Interval
@@ -25,9 +23,9 @@ internal fun parseStatements(text: String, includeNames: Boolean = true): List<P
             }
         }, statement)
         val binds = nodes.filter { it.text.startsWith(":") }.map { it.text.removePrefix(":") }.distinct()
-        val name =
-            if (includeNames) text.lineSequence().drop(statement.start.line - 2).first().removePrefix("--").trim()
-            else "Unnamed"
+        val nameLine =
+            if (includeNames) parseNameLine(text.lineSequence().drop(statement.start.line - 2).first())
+            else ParsedStatement.Function("Unnamed", listOf())
         val sql = statement.start.inputStream.getText(
             Interval.of(
                 statement.start.startIndex,
@@ -35,10 +33,26 @@ internal fun parseStatements(text: String, includeNames: Boolean = true): List<P
             )
         )
         ParsedStatement(
-            name = name,
+            name = nameLine.name,
             sql = sql,
             parsed = statement,
-            binds = binds
+            binds = binds,
+            functionParameters = nameLine.parameters.associate { it.name to it.type }
         )
     }
+}
+
+internal fun parseNameLine(text: String): ParsedStatement.Function {
+    val trimmed = text.removePrefix("--").trim()
+    if (!trimmed.startsWith("fun ")) return ParsedStatement.Function(trimmed, listOf())
+    val declaration = KotlinParser(CommonTokenStream(KotlinLexer(ANTLRInputStream(trimmed)))).functionDeclaration()
+    val name = declaration.simpleIdentifier().text
+    val parameters = mutableListOf<ParsedStatement.Parameter>()
+    ParseTreeWalker.DEFAULT.walk(object : KotlinParserBaseListener() {
+        override fun enterParameter(ctx: KotlinParser.ParameterContext) {
+            parameters += ParsedStatement.Parameter(ctx.simpleIdentifier().text, ctx.type().text)
+        }
+    }, declaration.functionValueParameters())
+
+    return ParsedStatement.Function(name, parameters)
 }

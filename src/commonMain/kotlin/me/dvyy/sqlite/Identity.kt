@@ -1,3 +1,3 @@
 package me.dvyy.sqlite
 
-typealias Identity = Int
+typealias Identity = Long

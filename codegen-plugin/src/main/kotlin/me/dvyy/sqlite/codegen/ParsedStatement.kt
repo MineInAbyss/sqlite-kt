@@ -7,4 +7,16 @@ internal data class ParsedStatement(
     val sql: String,
     val parsed: SQLiteParser.Sql_stmtContext,
     val binds: List<String>,
-)
+    val functionParameters: Map<String, String>,
+) {
+    data class Function(
+        val name: String,
+        val parameters: List<Parameter>,
+    ) {}
+
+    data class Parameter(
+        val name: String,
+        val type: String,
+    )
+}
+

@@ -43,13 +43,9 @@ class SelectStatement<R>(
 
     context(tx: Transaction)
     inline fun <T> firstOrNull(
-        statement: NamedColumnSqliteStatement.() -> T,
+        statement: NamedColumnSqliteStatement.(R) -> T,
     ): T? = prepare {
-        if (step()) statement()
+        if (step()) statement(context)
         else null
-    }
-
-    inline fun <T> asFlow() {
-
     }
 }

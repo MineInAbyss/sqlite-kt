@@ -13,6 +13,7 @@ repositories {
 dependencies {
     antlr("org.antlr:antlr4:4.13.2")
     implementation("com.squareup:kotlinpoet:2.1.0")
+    compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin:${libs.versions.kotlin.get()}")
     implementation(gradleApi())
     implementation("dev.kord.codegen:kotlinpoet:1.0.2")
     implementation(project(":")) {
@@ -24,7 +25,7 @@ dependencies {
 
 tasks {
     generateGrammarSource {
-        outputDirectory = file("${project.buildDir}/generated/sources/main/java/antlr/me/dvyy/sqlite/generated/antlr")
+        outputDirectory = file("${project.buildDir}/generated/sources/main/java/me/dvyy/sqlite/generated/antlr")
         arguments = listOf("-package", "me.dvyy.sqlite.generated.antlr")
     }
     compileKotlin {

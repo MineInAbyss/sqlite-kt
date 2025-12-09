@@ -7,6 +7,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.channels.consume
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import me.dvyy.sqlite.connection.PrepareCachingSQLiteConnection
 import me.dvyy.sqlite.internal.throttle
@@ -164,7 +165,7 @@ open class Database(
         val (result, modified) = writeConnection.transaction {
             tx.block() to with(tx) {
                 val invalidated =
-                    select("select table_id from skt_table_modification_log where invalidated = 1;").map { getInt(0) }
+                    select("SELECT table_id FROM skt_table_modification_log WHERE invalidated = 1;").map { getInt(0) }
                 if (invalidated.isNotEmpty()) exec("DELETE FROM skt_table_modification_log;")
                 invalidated
             }
@@ -187,7 +188,7 @@ open class Database(
     inline fun <T> watch(
         vararg tables: String,
         crossinline read: Transaction.() -> T,
-    ) = flow {
+    ): Flow<T> = flow {
         val tableIds = tables.map { tableIndices[it] ?: error("Table $it is not being tracked") }.toSet()
         val tableFlow = observers.forTables(tableIds)
         emit(read { read() })
