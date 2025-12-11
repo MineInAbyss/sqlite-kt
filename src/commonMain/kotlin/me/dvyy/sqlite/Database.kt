@@ -189,6 +189,7 @@ open class Database(
         vararg tables: String,
         crossinline read: Transaction.() -> T,
     ): Flow<T> = flow {
+        tables.forEach { trackChangesOn(it) }
         val tableIds = tables.map { tableIndices[it] ?: error("Table $it is not being tracked") }.toSet()
         val tableFlow = observers.forTables(tableIds)
         emit(read { read() })

@@ -13,14 +13,14 @@ class SqliteCodegenPlugin : Plugin<Project> {
             objects.newInstance(SqliteCodegenExtension::class.java, name).apply {
                 outputDir.convention(project.layout.buildDirectory.dir("generated/source/sqlite"))
                 packageName.convention("me.dvyy.sqlite.generated")
-                mainClassName.convention(name.capitalized() + "Database")
+                mainClassName.convention(name.capitalized() + "Queries")
                 if (project.plugins.hasPlugin("org.jetbrains.kotlin.multiplatform"))
                     sourceDir.convention(project.layout.projectDirectory.dir("src/commonMain/sql/$name"))
                 else sourceDir.convention(project.layout.projectDirectory.dir("src/main/sql/$name"))
                 generatedDatabasePath.convention(project.layout.buildDirectory.file("generated/databases/$name.db"))
             }
         }
-        val extension = project.extensions.add("sqliteKt", databaseContainer)
+        project.extensions.add("sqliteKt", databaseContainer)
         databaseContainer.all { db ->
             val task = project.tasks.register(
                 "generateSqliteBindingsFor${db.name.capitalized()}",
