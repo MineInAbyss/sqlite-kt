@@ -100,7 +100,6 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                                     when {
                                         statement.parsed.insert_stmt() != null -> {
                                             contextParameter("tx", WriteTransaction::class)
-                                            returns(Long::class)
                                             addCode("return tx.insert(%S,", statement.sql)
                                         }
 

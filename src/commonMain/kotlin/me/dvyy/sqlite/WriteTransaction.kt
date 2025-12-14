@@ -12,8 +12,6 @@ class WriteTransaction(
     fun insert(
         @Language("SQLite") sql: String,
         vararg parameters: Any,
-    ): Long {
-        exec(sql, *parameters)
-        return select("SELECT last_insert_rowid()").first { getLong(0) }
-    }
+//        read: NamedColumnSqliteStatement.(T) -> R,
+    ) = exec(sql, *parameters)
 }
