@@ -1,6 +1,7 @@
 package me.dvyy.sqlite
 
 import androidx.sqlite.SQLiteConnection
+import me.dvyy.sqlite.statement.NamedColumnSqliteStatement
 import org.intellij.lang.annotations.Language
 import kotlin.coroutines.RestrictsSuspension
 
@@ -9,9 +10,10 @@ class WriteTransaction(
     connection: SQLiteConnection,
     identity: Identity,
 ) : Transaction(connection, identity) {
-    fun insert(
+    fun <T, R> insert(
         @Language("SQLite") sql: String,
+        context: T,
         vararg parameters: Any,
-//        read: NamedColumnSqliteStatement.(T) -> R,
-    ) = exec(sql, *parameters)
+        returning: NamedColumnSqliteStatement.(T) -> R,
+    ) = select(sql, *parameters).firstOrNull { returning(this, context) }
 }

@@ -3,16 +3,15 @@ package me.dvyy.sqlite.codegen
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.ExperimentalKotlinPoetApi
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.asClassName
-import dev.kord.codegen.kotlinpoet.FileSpec
-import dev.kord.codegen.kotlinpoet.addClass
-import dev.kord.codegen.kotlinpoet.addFunction
-import dev.kord.codegen.kotlinpoet.addProperty
+import dev.kord.codegen.kotlinpoet.*
 import me.dvyy.sqlite.Database
 import me.dvyy.sqlite.Transaction
 import me.dvyy.sqlite.WriteTransaction
 import me.dvyy.sqlite.codegen.helpers.parseStatements
 import me.dvyy.sqlite.codegen.helpers.printingErrorMessages
+import me.dvyy.sqlite.statement.NamedColumnSqliteStatement
 import me.dvyy.sqlite.statement.SelectStatement
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -87,6 +86,9 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                                     }
                                 }
                                 addFunction(statement.name) {
+                                    val isInsert = statement.parsed.insert_stmt() != null
+                                    val isInsertReturning = statement.parsed.insert_stmt()?.returning_clause() != null
+                                    val isSelect = statement.parsed.select_stmt() != null
                                     statement.binds.forEach {
                                         val type = statement.functionParameters.getOrDefault(it, "Any")
                                         addParameter(
@@ -98,12 +100,12 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                                         )
                                     }
                                     when {
-                                        statement.parsed.insert_stmt() != null -> {
-                                            contextParameter("tx", WriteTransaction::class)
-                                            addCode("return tx.insert(%S,", statement.sql)
-                                        }
+//                                        statement.parsed.insert_stmt() != null -> {
+//                                            contextParameter("tx", WriteTransaction::class)
+//                                            addCode("return tx.insert(%S,", statement.sql)
+//                                        }
 
-                                        statement.parsed.select_stmt() != null -> {
+                                        isSelect || isInsert -> {
                                             val existingClass = seenColumnNames.indexOf(colNames)
                                             val name =
                                                 "Context${if (existingClass != -1) existingClass else seenColumnNames.size}"
@@ -118,8 +120,22 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                                                 }
                                             }
                                             val contextClassName = ClassName("", name)
-                                            contextParameter("tx", Transaction::class)
-                                            returns(
+                                            if (isInsertReturning) {
+                                                val returnType = TypeVariableName("R")
+                                                addTypeVariable(returnType)
+
+                                                addParameter(
+                                                    "returning", LambdaTypeName(
+                                                        receiver = NamedColumnSqliteStatement::class.asClassName(),
+                                                        parameters = arrayOf(contextClassName),
+                                                        returnType = returnType
+                                                    )
+                                                )
+                                            }
+                                            if (isInsert) contextParameter("tx", WriteTransaction::class)
+                                            else contextParameter("tx", Transaction::class)
+                                            if (isInsertReturning) returns(TypeVariableName("R"))
+                                            else returns(
                                                 SelectStatement::class.asClassName()
                                                     .parameterizedBy(contextClassName)
                                             )
@@ -141,6 +157,7 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                                         addCode("%N,", it)
                                     }
                                     addCode(")")
+                                    if (isInsertReturning) addCode(".first { returning(this, it) }")
                                 }
                             }
                         }
