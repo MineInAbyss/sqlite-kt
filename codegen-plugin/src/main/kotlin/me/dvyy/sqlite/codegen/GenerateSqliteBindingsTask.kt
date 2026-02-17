@@ -100,10 +100,10 @@ open class GenerateSqliteBindingsTask : DefaultTask() {
                                         )
                                     }
                                     when {
-//                                        statement.parsed.insert_stmt() != null -> {
-//                                            contextParameter("tx", WriteTransaction::class)
-//                                            addCode("return tx.insert(%S,", statement.sql)
-//                                        }
+                                        isInsert && !isInsertReturning -> {
+                                            contextParameter("tx", WriteTransaction::class)
+                                            addCode("return tx.exec(%S,", statement.sql)
+                                        }
 
                                         isSelect || isInsert -> {
                                             val existingClass = seenColumnNames.indexOf(colNames)
