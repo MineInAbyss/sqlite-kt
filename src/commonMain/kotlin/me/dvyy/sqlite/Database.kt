@@ -107,6 +107,9 @@ open class Database(
 
     private var isClosed = false
 
+    @PublishedApi
+    internal val writeScope = CoroutineScope((parentScope?.coroutineContext ?: Dispatchers.Default) + dbWriteDispatcher)
+
     // TODO use multiplatform ThreadLocal like koin does (uses Stately library outside JVM)
     //  https://github.com/InsertKoinIO/koin/blob/main/projects/core/koin-core/build.gradle.kts
     @PublishedApi
@@ -184,6 +187,13 @@ open class Database(
         Transaction(conn, identity).block()
     }
 
+    inline fun <T> launchWrite(
+        identity: Identity = defaultIdentity ?: error("Identity must be specified when writing"),
+        crossinline block: WriteTransaction.() -> T,
+    ): Job = writeScope.launch {
+        write(identity, block)
+    }
+
     /** Watches tables associated with a query for changes (this API is not complete yet.) */
     inline fun <T> watch(
         vararg tables: String,
@@ -206,6 +216,7 @@ open class Database(
         // Close dispatchers
         dbWriteDispatcher.close()
         dbReadDispatcher.close()
+        writeScope.cancel()
 
         // Close read and write sqlite connections
         writeConnection.close()
