@@ -108,7 +108,8 @@ open class Database(
     private var isClosed = false
 
     @PublishedApi
-    internal val writeScope = CoroutineScope((parentScope?.coroutineContext ?: Dispatchers.Default) + dbWriteDispatcher)
+    internal val writeScope =
+        CoroutineScope((parentScope?.coroutineContext ?: Dispatchers.Default) + dbWriteDispatcher + SupervisorJob())
 
     // TODO use multiplatform ThreadLocal like koin does (uses Stately library outside JVM)
     //  https://github.com/InsertKoinIO/koin/blob/main/projects/core/koin-core/build.gradle.kts
