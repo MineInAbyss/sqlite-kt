@@ -9,6 +9,7 @@ repositories {
 }
 
 kotlin {
+    jvmToolchain(17)
     jvm()
 
     compilerOptions {

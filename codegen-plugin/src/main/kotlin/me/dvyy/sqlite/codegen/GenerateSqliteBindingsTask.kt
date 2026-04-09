@@ -19,8 +19,10 @@ import org.gradle.api.tasks.*
 import java.nio.file.Path
 import kotlin.io.path.*
 
+@CacheableTask
 open class GenerateSqliteBindingsTask : DefaultTask() {
     @InputDirectory
+    @CompileClasspath
     lateinit var source: Path
 
     @Input
