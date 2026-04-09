@@ -22,7 +22,7 @@ import kotlin.io.path.*
 @CacheableTask
 open class GenerateSqliteBindingsTask : DefaultTask() {
     @InputDirectory
-    @CompileClasspath
+    @PathSensitive(PathSensitivity.ABSOLUTE)
     lateinit var source: Path
 
     @Input
