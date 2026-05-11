@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    implementation("me.dvyy:sqlite-kt")
+    implementation("me.dvyy.sqlite:sqlite-kt")
 }
 
 val compileKotlin: KotlinCompile by tasks

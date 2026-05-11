@@ -1,7 +1,7 @@
 plugins {
-    id(libs.plugins.kotlin.jvm.get().pluginId)
+    kotlin("jvm")
+    alias(miaLibs.plugins.mia.publication)
     `java-gradle-plugin`
-    `maven-publish`
     antlr
 }
 
@@ -10,12 +10,16 @@ repositories {
     google()
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 dependencies {
-    antlr("org.antlr:antlr4:4.13.2")
-    implementation("com.squareup:kotlinpoet:2.1.0")
+    antlr(libs.antlr)
+    implementation(libs.kotlinpoet)
     compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin:${libs.versions.kotlin.get()}")
     implementation(gradleApi())
-    implementation("dev.kord.codegen:kotlinpoet:1.0.2")
+    implementation(libs.kotlinpoet.extensions)
     implementation(project(":")) {
         exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-core")
         exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-core-jvm")
@@ -25,7 +29,9 @@ dependencies {
 
 tasks {
     generateGrammarSource {
-        outputDirectory = file("${project.buildDir}/generated/sources/main/java/me/dvyy/sqlite/generated/antlr")
+        outputDirectory =
+            project.layout.buildDirectory.file("generated/sources/main/java/me/dvyy/sqlite/generated/antlr")
+                .get().asFile
         arguments = listOf("-package", "me.dvyy.sqlite.generated.antlr")
     }
     compileKotlin {
@@ -45,27 +51,5 @@ gradlePlugin {
 sourceSets {
     main {
         java.srcDir("build/generated/sources/main/java")
-    }
-}
-
-kotlin {
-    jvmToolchain(21)
-    compilerOptions {
-        freeCompilerArgs.add("-Xcontext-parameters")
-    }
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "mineinabyss"
-            url = uri("https://repo.mineinabyss.com/releases")
-            credentials(PasswordCredentials::class)
-        }
-        maven {
-            name = "mineinabyssSnapshots"
-            url = uri("https://repo.mineinabyss.com/snapshots")
-            credentials(PasswordCredentials::class)
-        }
     }
 }

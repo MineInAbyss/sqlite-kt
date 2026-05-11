@@ -1,6 +1,6 @@
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    `maven-publish`
+    alias(miaLibs.plugins.mia.kotlin.multiplatform)
+    alias(miaLibs.plugins.mia.publication)
 }
 
 repositories {
@@ -32,21 +32,6 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.test)
                 implementation(libs.kotest.assertions)
             }
-        }
-    }
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "mineinabyss"
-            url = uri("https://repo.mineinabyss.com/releases")
-            credentials(PasswordCredentials::class)
-        }
-        maven {
-            name = "mineinabyssSnapshots"
-            url = uri("https://repo.mineinabyss.com/snapshots")
-            credentials(PasswordCredentials::class)
         }
     }
 }
