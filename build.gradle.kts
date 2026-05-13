@@ -1,6 +1,6 @@
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    `maven-publish`
+    alias(miaLibs.plugins.kotlin.multiplatform)
+    alias(miaLibs.plugins.mia.publication)
 }
 
 repositories {
@@ -20,8 +20,8 @@ kotlin {
         commonMain {
             dependencies {
                 dependencies {
-                    api(libs.androidx.sqlite)
-                    implementation(libs.kotlinx.coroutines.core)
+                    api(miaLibs.androidx.sqlite.bundled)
+                    implementation(miaLibs.kotlinx.coroutines)
                     implementation(libs.log4k)
                 }
             }
@@ -29,24 +29,9 @@ kotlin {
         commonTest {
             dependencies {
                 implementation(kotlin("test"))
-                implementation(libs.kotlinx.coroutines.test)
-                implementation(libs.kotest.assertions)
+                implementation(miaLibs.kotlinx.coroutines.test)
+                implementation(miaLibs.kotest.assertions)
             }
-        }
-    }
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "mineinabyss"
-            url = uri("https://repo.mineinabyss.com/releases")
-            credentials(PasswordCredentials::class)
-        }
-        maven {
-            name = "mineinabyssSnapshots"
-            url = uri("https://repo.mineinabyss.com/snapshots")
-            credentials(PasswordCredentials::class)
         }
     }
 }

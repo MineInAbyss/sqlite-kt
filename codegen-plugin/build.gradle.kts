@@ -1,5 +1,6 @@
 plugins {
-    id(libs.plugins.kotlin.jvm.get().pluginId)
+    id(miaLibs.plugins.kotlin.jvm.get().pluginId)
+    alias(miaLibs.plugins.mia.publication)
     `java-gradle-plugin`
     `maven-publish`
     antlr
@@ -13,14 +14,15 @@ repositories {
 dependencies {
     antlr("org.antlr:antlr4:4.13.2")
     implementation("com.squareup:kotlinpoet:2.1.0")
-    compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin:${libs.versions.kotlin.get()}")
-    implementation(gradleApi())
     implementation("dev.kord.codegen:kotlinpoet:1.0.2")
+
+    compileOnly(miaLibs.gradle.kotlin)
+    implementation(gradleApi())
+    implementation(miaLibs.kotlinx.coroutines)
     implementation(project(":")) {
         exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-core")
         exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-core-jvm")
     }
-    implementation(libs.kotlinx.coroutines.core.jvm)
 }
 
 tasks {
@@ -52,20 +54,5 @@ kotlin {
     jvmToolchain(21)
     compilerOptions {
         freeCompilerArgs.add("-Xcontext-parameters")
-    }
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "mineinabyss"
-            url = uri("https://repo.mineinabyss.com/releases")
-            credentials(PasswordCredentials::class)
-        }
-        maven {
-            name = "mineinabyssSnapshots"
-            url = uri("https://repo.mineinabyss.com/snapshots")
-            credentials(PasswordCredentials::class)
-        }
     }
 }
