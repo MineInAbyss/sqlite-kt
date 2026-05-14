@@ -2,8 +2,6 @@
 kotlinpoet = "2.3.0"
 
 [libraries]
-kotlinx-coroutines-test = "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2"
-kotest-assertions = "io.kotest:kotest-assertions-core:6.0.0.M6"
 kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-extensions = "dev.kord.codegen:kotlinpoet:1.0.2"
 antlr = "org.antlr:antlr4:4.13.2"

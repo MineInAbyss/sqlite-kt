@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm")
-    alias(miaLibs.plugins.mia.publication)
+    id(miaLibs.plugins.mia.publication.get().pluginId)
     `java-gradle-plugin`
     antlr
 }
@@ -17,8 +17,7 @@ kotlin {
 dependencies {
     antlr(libs.antlr)
     implementation(libs.kotlinpoet)
-    implementation("dev.kord.codegen:kotlinpoet:1.0.2")
-
+    implementation(libs.kotlinpoet.extensions)
     compileOnly(miaLibs.gradle.kotlin)
     implementation(gradleApi())
     implementation(miaLibs.kotlinx.coroutines)
@@ -37,6 +36,12 @@ tasks {
     }
     compileKotlin {
         dependsOn(generateGrammarSource)
+    }
+}
+
+idofront {
+    publication {
+        addJavaPublication = false
     }
 }
 
