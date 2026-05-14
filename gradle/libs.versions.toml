@@ -1,18 +1,10 @@
 [versions]
-kotlin = "2.3.20"
 kotlinpoet = "2.3.0"
 
 [libraries]
-androidx-sqlite = "androidx.sqlite:sqlite-bundled:2.6.2"
-kotlinx-serialization-json = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1"
-kotlinx-coroutines-core = "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2"
-kotlinx-coroutines-core-jvm = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.10.2"
 kotlinx-coroutines-test = "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2"
 kotest-assertions = "io.kotest:kotest-assertions-core:6.0.0.M6"
 kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-extensions = "dev.kord.codegen:kotlinpoet:1.0.2"
 antlr = "org.antlr:antlr4:4.13.2"
 log4k = "io.github.smyrgeorge:log4k:1.1.2"
-[plugins]
-kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

@@ -17,14 +17,15 @@ kotlin {
 dependencies {
     antlr(libs.antlr)
     implementation(libs.kotlinpoet)
-    compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin:${libs.versions.kotlin.get()}")
+    implementation("dev.kord.codegen:kotlinpoet:1.0.2")
+
+    compileOnly(miaLibs.gradle.kotlin)
     implementation(gradleApi())
-    implementation(libs.kotlinpoet.extensions)
+    implementation(miaLibs.kotlinx.coroutines)
     implementation(project(":")) {
         exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-core")
         exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-core-jvm")
     }
-    implementation(libs.kotlinx.coroutines.core.jvm)
 }
 
 tasks {
